@@ -1,0 +1,166 @@
+import os
+import time
+import RPi.GPIO as GPIO
+import http.client
+import urllib
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+red_led_pin=21
+green_led_pin=20
+a=0
+GPIO.setup(red_led_pin, GPIO.OUT)
+GPIO.setup(green_led_pin, GPIO.OUT)
+GPIO.output(red_led_pin, GPIO.LOW)
+GPIO.output(green_led_pin, GPIO.LOW)
+
+import numpy as np
+#import matplotlib.pyplot as plt
+import pandas as pd
+from PIL import Image, ImageTk
+import PIL.Image
+import PIL.ImageTk
+from tkinter import *
+
+
+def sub():
+    
+    def traffic_light():
+        kilo_meter=km.get()
+        densi=v_d.get()
+        
+        
+        data = pd.read_csv("local_authority_traffic.csv")
+        
+
+        x=data.iloc[:,[3,6]].values
+        y=data.iloc[:,7].values
+
+        from sklearn.model_selection import train_test_split
+        x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.25,random_state=0)
+
+        from sklearn.preprocessing import StandardScaler
+        st_x=StandardScaler()
+        x_train=st_x.fit_transform(x_train)
+        x_test=st_x.transform(x_test)
+
+        from sklearn.svm import SVC
+        classifier=SVC(kernel='linear',random_state=0)
+        classifier.fit(x_train,y_train)
+
+        y_pred=classifier.predict([[kilo_meter,densi]]) #476.198,1408
+        predi=np.array_str(y_pred)
+        
+
+        #add your code here
+        if predi=="[1]":
+            a=1
+            print("red")
+            GPIO.output(red_led_pin, GPIO.HIGH)
+            GPIO.output(green_led_pin, GPIO.LOW)
+
+            parameter=urllib.parse.urlencode({'field1':a,'key':'ARFDHLC1E9B4A135'})
+            headers={"Content-type":"application/x-www-form-urlencoded","Accept":"text/plain"}
+            conn=http.client.HTTPConnection("api.thingspeak.com:80")
+            conn.request("POST","/update",parameter,headers)
+            response=conn.getresponse()
+            print (response.status,response.reason)
+            data=response.read()
+            conn.close()
+            time.sleep(2)
+        else:
+            a=0
+            print("green")
+            GPIO.output(red_led_pin, GPIO.LOW)
+            GPIO.output(green_led_pin, GPIO.HIGH)
+
+            parameter=urllib.parse.urlencode({'field1':a,'key':'ARFDHLC1E9B4A135'})
+            headers={"Content-type":"application/x-www-form-urlencoded","Accept":"text/plain"}
+            conn=http.client.HTTPConnection("api.thingspeak.com:80")
+            conn.request("POST","/update",parameter,headers)
+            response=conn.getresponse()
+            print (response.status,response.reason)
+            data=response.read()
+            conn.close()
+
+    def c_r():
+        window2 = Toplevel()
+        window2.geometry('500x300')
+        #image=Image.open('main.jpg')
+        fp = open("sub.png","rb")
+        image = PIL.Image.open(fp)
+        image=image.resize((500,300))
+        photo_image=PIL.ImageTk.PhotoImage(image)
+        label=Label(window2,image=photo_image)
+        label.place(x=0,y=0)
+
+        lb14 = Label(window2, text="Details of Place with KM",font=('Times',15,'bold'),justify='center',fg="black")
+        lb14.place(x=150, y=40)
+
+
+        lb1 = Label(window2, text="Attibele:460-480",font=('Times',15),justify='center',fg="black")
+        lb1.place(x=50, y=100)
+
+
+        lb12 = Label(window2, text="JayaNagar:715-780",font=('Times',15),justify='center',fg="black")
+        lb12.place(x=50, y=150)
+
+        lb12 = Label(window2, text="Yelahanka:350-380",font=('Times',15),justify='center',fg="black")
+        lb12.place(x=50, y=200)
+        
+        window2.mainloop()
+
+
+
+    
+    window1 = Toplevel()
+    window1.geometry('500x400')
+    #image=Image.open('main.jpg')
+    fp = open("sub.png","rb")
+    image = PIL.Image.open(fp)
+    image=image.resize((500,400))
+    photo_image=PIL.ImageTk.PhotoImage(image)
+    label=Label(window1,image=photo_image)
+    label.place(x=0,y=0)
+
+    lb12 = Label(window1, text="Enter Information",font=('Times',15,'bold'),justify='center',fg="black")
+    lb12.place(x=150, y=40)
+
+    btn2 = Button(window1, text="check range", width=15, height=1,fg="black",font=('algerian',10),bg="lightgreen",justify='center',command=c_r)
+    btn2.place(x=320, y=150)
+
+    lb1 = Label(window1, text="Road in K.M",font=('Times',15),justify='center',fg="black")
+    lb1.place(x=50, y=100)
+
+    km=Entry(window1,width=20,font=("bold",15),highlightthickness=2)
+    km.place(x=200,y= 100)
+
+    lb11 = Label(window1, text="Vehicle Density",font=('Times',15),justify='center',fg="black")
+    lb11.place(x=50, y=200)
+
+    v_d=Entry(window1,width=20,font=("bold",15),highlightthickness=2)
+    v_d.place(x=200,y= 200)
+
+    btn1 = Button(window1, text="Check light Signal", width=20, height=1,fg="black",font=('algerian',15),bg="pink",justify='center',command=traffic_light)
+    btn1.place(x=150, y=280)
+
+    window1.mainloop()
+    
+window9 = Tk()
+window9.geometry('700x500')
+#image=Image.open('main.jpg')
+fp = open("home.jpg","rb") 
+image = PIL.Image.open(fp)
+image=image.resize((700,500))
+photo_image=PIL.ImageTk.PhotoImage(image)
+label=Label(window9,image=photo_image)
+label.place(x=0,y=0)
+
+lb1 = Label(window9, text="Traffic Signal System Using Machine Learning",font=('algerian',18,'bold'),justify='center',fg="BLUE")
+lb1.place(x=50, y=70)
+
+btn1 = Button(window9, text="Light_status", width=15, height=1,fg="black",font=('algerian',20,'bold'),bg="SKYBLUE",justify='center',command=sub)
+btn1.place(x=250, y=250)
+
+window9.mainloop()
